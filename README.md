@@ -1,5 +1,7 @@
-# 🧠 Blog-AI
-
+ Blog-AI
+<p align="center">
+  <img src="./screenshots/prashblog-banner.png" width="100%">
+</p>
 <p align="center">
   <h3 align="center">AI-Powered Full Stack Blogging Platform</h3>
   <p align="center">
