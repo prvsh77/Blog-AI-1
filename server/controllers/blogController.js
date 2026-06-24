@@ -45,7 +45,7 @@ export const addBlog = async (req, res)=>{
                 }
                 const localPath = `uploads/${Date.now()}_${imageFile.originalname}`;
                 fs.copyFileSync(imageFile.path, localPath);
-                image = `http://localhost:${process.env.PORT || 3000}/${localPath}`;
+                image = `${req.protocol}://${req.get('host')}/${localPath}`;
             }
         } else {
             // Default high-quality stock image fallback based on category
