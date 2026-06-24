@@ -1,4 +1,3 @@
-# 🧠 Blog-AI
 
 <p align="center">
   <img src="./prashblog-banner.png" alt="Blog-AI Banner" width="100%">
@@ -43,7 +42,7 @@ https://blog-ai-api.onrender.com
 
 ---
 
-# 🚀 Overview
+#  Overview
 
 Blog-AI is a production-ready AI-powered blogging platform built using React, Node.js, Express.js, MongoDB Atlas, and Google Gemini AI.
 
@@ -53,7 +52,7 @@ Built with scalability, cloud deployment, and modern web development practices i
 
 ---
 
-# ✨ Features
+#  Features
 
 ## 🔐 Authentication & User Management
 
@@ -82,7 +81,7 @@ Built with scalability, cloud deployment, and modern web development practices i
 * Blog View Tracking
 * Personalized Experience
 
-## 🤖 AI Features
+##  AI Features
 
 * Gemini AI Integration
 * AI Content Generation
