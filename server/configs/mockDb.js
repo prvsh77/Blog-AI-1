@@ -91,10 +91,29 @@ function readDb() {
       return initialData;
     }
     const content = fs.readFileSync(DB_FILE, 'utf-8');
-    return JSON.parse(content);
+    const data = JSON.parse(content);
+    
+    // Dynamic schema migrations for existing JSON records
+    if (!data.subscribers) {
+      data.subscribers = [];
+    }
+    data.blogs = data.blogs.map(b => ({
+      featured: false,
+      tags: [],
+      views: 0,
+      readTime: 0,
+      ...b
+    }));
+    // Ensure at least one blog is featured initially for E2E banner testing
+    if (data.blogs.length > 0 && !data.blogs.some(b => b.featured)) {
+      data.blogs[0].featured = true;
+      data.blogs[0].tags = ['AI', 'Writing', 'Technology'];
+      data.blogs[0].views = 342;
+    }
+    return data;
   } catch (err) {
     console.error('Error reading fallback JSON database:', err);
-    return { blogs: [], comments: [] };
+    return { blogs: [], comments: [], subscribers: [] };
   }
 }
 
@@ -205,6 +224,11 @@ export const MockBlogModel = {
           if (expected instanceof RegExp) {
             return expected.test(item[key]);
           }
+          if (expected && typeof expected === 'object') {
+            if ('$ne' in expected) {
+              return item[key] !== expected['$ne'];
+            }
+          }
           return item[key] === expected;
         });
       });
@@ -225,6 +249,10 @@ export const MockBlogModel = {
     const db = readDb();
     const newBlog = {
       _id: 'blog_' + Date.now() + Math.random().toString(36).substr(2, 5),
+      featured: false,
+      tags: [],
+      views: 0,
+      readTime: 0,
       ...data,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -341,6 +369,51 @@ export const MockCommentModel = {
   countDocuments: async (query = {}) => {
     const db = readDb();
     let results = db.comments;
+    const keys = Object.keys(query);
+    if (keys.length > 0) {
+      results = results.filter(item => {
+        return keys.every(key => item[key] === query[key]);
+      });
+    }
+    return results.length;
+  }
+};
+
+export const MockSubscriberModel = {
+  find: (query = {}) => {
+    const db = readDb();
+    let results = db.subscribers || [];
+    const keys = Object.keys(query);
+    if (keys.length > 0) {
+      results = results.filter(item => {
+        return keys.every(key => item[key] === query[key]);
+      });
+    }
+    return new MockQuery(results);
+  },
+
+  create: async (data) => {
+    const db = readDb();
+    if (!db.subscribers) {
+      db.subscribers = [];
+    }
+    if (db.subscribers.some(s => s.email === data.email)) {
+      throw new Error("Email already subscribed");
+    }
+    const newSub = {
+      _id: 'sub_' + Date.now() + Math.random().toString(36).substr(2, 5),
+      ...data,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    db.subscribers.push(newSub);
+    writeDb(db);
+    return newSub;
+  },
+
+  countDocuments: async (query = {}) => {
+    const db = readDb();
+    let results = db.subscribers || [];
     const keys = Object.keys(query);
     if (keys.length > 0) {
       results = results.filter(item => {

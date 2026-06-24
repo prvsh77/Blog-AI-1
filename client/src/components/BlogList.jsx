@@ -3,8 +3,8 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from "framer-motion"
 import { useNavigate } from 'react-router-dom'
 import { useAppContext } from '../context/AppContext'
-import { blogCategories } from '../assets/assets'
-
+import { blogCategories, getCategoryImage } from '../assets/assets'
+import toast from "react-hot-toast";
 // Helper to normalize and clean category names (fixing DB typos on-the-fly)
 const normalizeCategory = (cat) => {
   if (!cat) return 'Article';
@@ -15,13 +15,45 @@ const normalizeCategory = (cat) => {
   return trimmed;
 };
 
-const BlogCard = ({ blog, index }) => {
+const BlogCard = ({ blog, index, axios, userToken }) => {
   const { title, description, category, image, _id, subTitle } = blog
   const navigate = useNavigate()
   
   // Clean description HTML to plain text in case subTitle is missing
   const cleanSubTitle = subTitle || (description ? description.replace(/<[^>]*>/g, '') : '')
 
+  const coverImage = image || getCategoryImage(category);
+  const toggleBookmark = async (e) => {
+
+    e.stopPropagation();
+
+    try {
+
+      const { data } = await axios.post(
+        `${import.meta.env.VITE_BASE_URL}/api/blog/bookmark`,
+        {
+          blogId: blog._id
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${userToken}`
+          }
+        }
+      );
+
+      console.log(data);
+
+      if (data.success) {
+        toast.success("Bookmark updated");
+      }
+
+    } catch (error) {
+
+      console.log(error);
+
+      toast.error("Bookmark failed");
+     }
+  };
   return (
     <motion.article
       layout
@@ -34,8 +66,13 @@ const BlogCard = ({ blog, index }) => {
     >
       {/* Image Container */}
       <div className="relative overflow-hidden h-52 sm:h-56 flex-shrink-0">
+        <button
+           onClick={toggleBookmark}
+           className="absolute top-4 right-4 z-20 bg-white/90 rounded-full p-2 shadow-lg hover:scale-110 transition">
+  🔖
+         </button>
         <img 
-          src={image} 
+          src={coverImage} 
           alt={title}
           className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700 ease-out"
         />
@@ -79,7 +116,13 @@ const BlogCard = ({ blog, index }) => {
 
 const BlogList = () => {
   const [menu, setMenu] = useState("All")
-  const { blogs, input } = useAppContext()
+  const { blogs, input, axios, userToken } = useAppContext()
+  console.log("USER TOKEN:", userToken);
+  console.log("========== BLOG DEBUG ==========")
+  console.log("Blogs State:", blogs)
+  console.log("Blogs Length:", blogs?.length)
+  console.log("Search Input:", input)
+  console.log("Selected Category:", menu)
 
   const filteredBlogs = () => {
     if (!blogs || blogs.length === 0) {
@@ -105,8 +148,11 @@ const BlogList = () => {
     return filtered
   }
 
-  const displayBlogs = filteredBlogs()
+const displayBlogs = filteredBlogs()
 
+console.log("Filtered Blogs:", displayBlogs)
+console.log("Filtered Count:", displayBlogs.length)
+console.log("==============================")
   return (
     <div className='min-h-screen bg-white/10 backdrop-blur-[2px]'>
       {/* Header Section */}
@@ -181,7 +227,7 @@ const BlogList = () => {
             className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8'
           >
             {displayBlogs.map((blog, index) => (
-              <BlogCard key={blog._id} blog={blog} index={index} />
+              <BlogCard key={blog._id} blog={blog} index={index} axios={axios} userToken={userToken}/>
             ))}
           </motion.div>
           ) : (

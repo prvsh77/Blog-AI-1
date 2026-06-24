@@ -72,6 +72,7 @@ const Dashboard = () => {
                             <th scope='col' className='px-2 py-4'> Blog Title </th>
                             <th scope='col' className='px-2 py-4 max-sm:hidden'> Date </th>
                             <th scope='col' className='px-2 py-4 max-sm:hidden'> Status </th>
+                            <th scope='col' className='px-2 py-4'> Action </th>
                         </tr>
                     </thead>
                     <tbody>

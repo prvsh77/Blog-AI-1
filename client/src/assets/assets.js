@@ -1,13 +1,23 @@
-import blog_pic_1 from './blog_pic_1.png';
-import blog_pic_2 from './blog_pic_2.png';
-import blog_pic_3 from './blog_pic_3.png';
-import blog_pic_4 from './blog_pic_4.png';
-import blog_pic_5 from './blog_pic_5.png';
-import blog_pic_6 from './blog_pic_6.png';
-import blog_pic_7 from './blog_pic_7.png';
-import blog_pic_8 from './blog_pic_8.png';
-import blog_pic_9 from './blog_pic_9.png';
-import blog_pic_10 from './blog_pic_10.png';
+import blog_pic_1 from './Lifestyle_pic.png';
+import blog_pic_2 from './Business_pic.png';
+import blog_pic_3 from './Digital_Marketing_pic.png';
+import blog_pic_4 from './AI_pic.png';
+import blog_pic_5 from './Friends.png';
+import blog_pic_6 from './Product_pic.png';
+import blog_pic_7 from './Finance_pic.png';
+import blog_pic_8 from './Education_pic.png';
+import blog_pic_9 from './Investments_pic.png';
+import blog_pic_10 from './Travel_pic.png';
+
+// Category Cover Images Mapped to Untracked Files
+import Technology_pic from './AI_pic.png';
+import Finance_pic from './Finance_pic.png';
+import Lifestyle_pic from './Lifestyle_pic.png';
+import Business_pic from './Business_pic.png';
+import Education_pic from './Education_pic.png';
+import Design_pic from './Investments_pic.png';
+import MobileApps_pic from './Product_pic.png';
+
 import facebook_icon from './facebook_icon.svg'
 import googleplus_icon from './googleplus_icon.svg'
 import twitter_icon from './twitter_icon.svg'
@@ -58,7 +68,45 @@ export const assets = {
     dashboard_icon_3,
     dashboard_icon_4,
 }
-export const blogCategories = ['All', 'Technology', 'Artificial Intelligence', 'Lifestyle', 'Finance']
+
+export const categoryImages = {
+    'Technology': Technology_pic,
+    'Finance': Finance_pic,
+    'Lifestyle': Lifestyle_pic,
+    'Business': Business_pic,
+    'Education': Education_pic,
+    'Design': Design_pic,
+    'MobileApps': MobileApps_pic,
+    'Artificial Intelligence': Technology_pic,
+}
+
+export const getCategoryImage = (category) => {
+    const normalized = (category || '').trim().toLowerCase().replace(/\s+/g, '');
+    if (normalized === 'technology' || normalized === 'artificialintelligence' || normalized === 'artificalintelligence') {
+        return Technology_pic;
+    }
+    if (normalized === 'finance') {
+        return Finance_pic;
+    }
+    if (normalized === 'lifestyle') {
+        return Lifestyle_pic;
+    }
+    if (normalized === 'business' || normalized === 'startups' || normalized === 'startup') {
+        return Business_pic;
+    }
+    if (normalized === 'education') {
+        return Education_pic;
+    }
+    if (normalized === 'design') {
+        return Design_pic;
+    }
+    if (normalized === 'mobileapps' || normalized === 'mobileapp') {
+        return MobileApps_pic;
+    }
+    return undefined; // Return nothing if no category matches
+}
+
+export const blogCategories = ['All', 'Technology', 'Artificial Intelligence', 'Lifestyle', 'Finance', 'Business', 'Education', 'Design', 'MobileApps']
 
 export const blog_data = [
     {

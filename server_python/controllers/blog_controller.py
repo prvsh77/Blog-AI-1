@@ -9,25 +9,59 @@ from bson import ObjectId
 from bson.errors import InvalidId
  
 
-async def add_blog(image: UploadFile, blog_json: str):
+async def add_blog(image: UploadFile | None, blog_json: str):
+    import os
     payload = json.loads(blog_json)
     title = payload.get("title")
     subTitle = payload.get("subTitle")
     description = payload.get("description")
     category = payload.get("category")
     isPublished = payload.get("isPublished")
-    if not title or not description or not category or not image:
+    if not title or not description or not category:
         return {"success": False, "message": "Missing required fields"}
-    content = await image.read()
-    upload = imagekit.upload_file(file=content, file_name=image.filename, options={"folder": "/blogs"})
-    optimized_url = imagekit.url({
-        "path": upload.get("filePath"),
-        "transformation": [
-            {"quality": "auto"},
-            {"format": "webp"},
-            {"width": "1280"}
-        ]
-    })
+
+    from configs.imagekit import imagekit
+
+    optimized_url = ""
+    if image and image.filename:
+        if imagekit:
+            try:
+                content = await image.read()
+                upload = imagekit.upload_file(file=content, file_name=image.filename, options={"folder": "/blogs"})
+                optimized_url = imagekit.url({
+                    "path": upload.get("filePath"),
+                    "transformation": [
+                        {"quality": "auto"},
+                        {"format": "webp"},
+                        {"width": "1280"}
+                    ]
+                })
+            except Exception as e:
+                return {"success": False, "message": f"ImageKit upload failed: {str(e)}"}
+        else:
+            # Local fallback storage
+            try:
+                if not os.path.exists("uploads"):
+                    os.makedirs("uploads")
+                filename = f"{int(datetime.utcnow().timestamp())}_{image.filename}"
+                filepath = os.path.join("uploads", filename)
+                content = await image.read()
+                with open(filepath, "wb") as f:
+                    f.write(content)
+                port = os.getenv("PORT", "3000")
+                optimized_url = f"http://localhost:{port}/uploads/{filename}"
+            except Exception as e:
+                return {"success": False, "message": f"Local image storage failed: {str(e)}"}
+    else:
+        # Stock category images
+        category_images = {
+            "Technology": "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1280&q=80",
+            "Startups": "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1280&q=80",
+            "Lifestyle": "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=1280&q=80",
+            "Finance": "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=1280&q=80"
+        }
+        optimized_url = category_images.get(category, category_images["Technology"])
+
     doc = {
         "title": title,
         "subTitle": subTitle,
@@ -101,7 +135,7 @@ async def get_related_blogs(
 
     return {
         "success": True,
-        "blogs": blogs
+        "posts": blogs
     }
 
 async def delete_blog_by_id(blog_id: str):

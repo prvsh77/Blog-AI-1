@@ -1,5 +1,5 @@
 import React from 'react';
-import { Route, Routes, Navigate } from 'react-router-dom';
+import { Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import Home from './pages/Home';
 import Blog from './pages/Blog';
 import Layout from './pages/admin/Layout';
@@ -7,15 +7,20 @@ import Dashboard from './pages/admin/Dashboard';
 import AddBlog from './pages/admin/AddBlog';
 import ListBlog from './pages/admin/ListBlog';
 import Comments from './pages/admin/Comments';
-import Login from './components/admin/Login';
+import AdminLogin from './components/admin/Login';
+import Login from './pages/Login';
+import Register from './pages/Register';
 import 'quill/dist/quill.snow.css';
 import { Toaster } from 'react-hot-toast';
 import { useAppContext } from './context/AppContext';
-
+import Profile from "./pages/Profile";
+import Bookmarks from "./pages/Bookmarks";
+import CreateBlog from "./pages/CreateBlog";
 // PrivateRoute component: protects specific routes
 const PrivateRoute = ({ children }) => {
   const { token } = useAppContext();
-  return token ? children : <Navigate to="/admin/login" replace />;
+  const location = useLocation();
+  return token ? children : <Navigate to="/admin/login" state={{ from: location }} replace />;
 };
 
 const App = () => {
@@ -36,17 +41,28 @@ const App = () => {
       <div className="relative z-10">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/blog/:id" element={<Blog />} />
-
+          <Route path="/blog/:slug" element={<Blog />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} /> 
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/bookmarks" element={<Bookmarks />} />
+          <Route path="/create-blog" element={<CreateBlog />}
+/>
           {/* Login page */}
-          <Route path="/admin/login" element={<Login />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
 
           {/* All admin routes use the same Layout (with Sidebar always visible) */}
           <Route path="/admin" element={<Layout />}>
-            {/* Public route - anyone can access */}
-            <Route path="addBlog" element={<AddBlog />} />
-
             {/* Protected routes - require login */}
+            <Route
+              path="addBlog"
+              element={
+                <PrivateRoute>
+                  <AddBlog />
+                </PrivateRoute>
+              }
+            />
+
             <Route
               index
               element={

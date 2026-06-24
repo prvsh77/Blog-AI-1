@@ -1,0 +1,13 @@
+{
+  "name": "blog-ai-monorepo",
+  "version": "1.0.0",
+  "description": "Unified startup scripts for Blog AI Platform",
+  "scripts": {
+    "install:all": "npm install && npm install --prefix client && npm install --prefix server",
+    "dev:node": "concurrently \"npm run dev --prefix client\" \"npm run server --prefix server\"",
+    "dev:python": "concurrently \"npm run dev --prefix client\" \"server_python\\.venv\\Scripts\\uvicorn app:app --reload --port 5000 --app-dir server_python\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

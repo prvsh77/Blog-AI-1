@@ -8,11 +8,15 @@ const blogSchema = new mongoose.Schema({
     category: {type: String, required: true},
     image: {type: String, required: true},
     isPublished: {type: Boolean, required: true},
+    featured: {type: Boolean, default: false},
+    tags: {type: [String], default: []},
+    views: {type: Number, default: 0},
+    readTime: {type: Number, default: 0},
 },{timestamps: true});
 
-const MongooseBlog = mongoose.model('blog', blogSchema);
+const Blog = mongoose.model('Blog', blogSchema);
 
-const BlogProxy = new Proxy(MongooseBlog, {
+const BlogProxy = new Proxy(Blog, {
     get(target, prop) {
         if (global.isMockDB) {
             const val = Reflect.get(MockBlogModel, prop);
@@ -23,4 +27,4 @@ const BlogProxy = new Proxy(MongooseBlog, {
     }
 });
 
-export default BlogProxy;
+export default Blog;

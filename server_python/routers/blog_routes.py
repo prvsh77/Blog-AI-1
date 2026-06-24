@@ -16,7 +16,7 @@ from controllers.blog_controller import (
 router = APIRouter()
 
 @router.post("/add")
-async def route_add(image: UploadFile = File(...), blog: str = Form(...)):
+async def route_add(image: UploadFile | None = File(None), blog: str = Form(...), _: bool = Depends(get_current_admin)):
     return await add_blog(image, blog)
 
 @router.get("/all")
@@ -28,7 +28,7 @@ async def route_by_id(blogId: str):
     return await get_blog_by_id(blogId)
 
 
-@router.get("/find/related")
+@router.get("/related")
 async def related_blogs(
     category: str,
     exclude: str

@@ -9,7 +9,7 @@ load_dotenv()
 MONGODB_URI = os.getenv("MONGODB_URI")  # e.g. mongodb+srv://user:pass@cluster0.xxxxx.mongodb.net
 
 # Create the async client
-client = AsyncIOMotorClient(MONGODB_URI)
+client = AsyncIOMotorClient(MONGODB_URI, serverSelectionTimeoutMS=2000)
 
 # Explicitly define your app's database name
 # Change "quickblog" to whatever you want (e.g., blogdb, myapp, etc.)

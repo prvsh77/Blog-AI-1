@@ -1,19 +1,40 @@
-import React, { useRef } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useAppContext } from '../context/AppContext'
 
 const Header = () => {
 
-  const {setInput, input} = useAppContext()
-  const inputRef = useRef()
+  const {setInput, input, axios} = useAppContext()
+  const [recentSearches, setRecentSearches] = useState(() => {
+    const saved = localStorage.getItem('recentSearches');
+    return saved ? JSON.parse(saved) : [];
+  });
 
-  const onSubmitHandler = async (e)=>{
+  // Track recent searches and log search analytics
+  useEffect(() => {
+    if (input && input.trim().length > 2) {
+      const delayDebounce = setTimeout(() => {
+        const query = input.trim();
+        setRecentSearches(prev => {
+          const filtered = prev.filter(s => s.toLowerCase() !== query.toLowerCase());
+          const updated = [query, ...filtered].slice(0, 5);
+          localStorage.setItem('recentSearches', JSON.stringify(updated));
+          return updated;
+        });
+
+        // Search Analytics Logging
+        console.log(`[Analytics] Search query logged: "${query}"`);
+        axios.post(`${import.meta.env.VITE_BASE_URL}/api/blog/search-log`, { query }).catch(() => {});
+      }, 1000);
+      return () => clearTimeout(delayDebounce);
+    }
+  }, [input]);
+
+  const onSubmitHandler = (e)=>{
      e.preventDefault();
-     setInput(inputRef.current.value)
   }
 
   const onClear = ()=>{
     setInput('')
-    inputRef.current.value = ''
   }
 
   return (
@@ -58,38 +79,46 @@ const Header = () => {
               <div className='relative flex items-center bg-white/60 backdrop-blur-xl border border-gray-200/50 rounded-full shadow-lg group-hover:shadow-xl group-focus-within:border-red-500/40 group-focus-within:ring-4 group-focus-within:ring-red-500/10 transition-all duration-300'>
                 <div className='pl-6 text-gray-400'>
                   <svg className='w-5 h-5 transition-colors group-focus-within:text-red-500' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2.2} d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' />
                   </svg>
                 </div>
                 <input 
-                  ref={inputRef} 
                   type="text" 
-                  placeholder='Search articles, topics, or categories...' 
-                  required 
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder='Search articles, content, categories, or tags...' 
                   className='w-full py-4 px-4 outline-none bg-transparent text-gray-900 placeholder-gray-400 font-medium text-sm sm:text-base'
                 />
-                <button 
-                  type="submit" 
-                  className='bg-gradient-to-r from-red-600 via-rose-500 to-orange-500 hover:from-red-700 hover:to-orange-600 text-white px-8 py-3 m-1.5 rounded-full font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer'
-                >
-                  Search
-                </button>
+                {input && (
+                  <button 
+                    type="button"
+                    onClick={onClear}
+                    className='text-gray-400 hover:text-red-600 p-2 mr-2 cursor-pointer transition-colors duration-200'
+                  >
+                    <svg className='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d='M6 18L18 6M6 6l12 12' />
+                    </svg>
+                  </button>
+                )}
               </div>
             </form>
-          </div>
 
-          {/* Clear Button */}
-          {input && (
-            <button 
-              onClick={onClear} 
-              className='inline-flex items-center gap-2 text-sm text-gray-500 hover:text-red-600 font-medium transition-colors duration-200'
-            >
-              <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2.2} d='M6 18L18 6M6 6l12 12' />
-              </svg>
-              Clear search
-            </button>
-          )}
+            {/* Recent Searches Panel */}
+            {recentSearches.length > 0 && (
+              <div className="flex flex-wrap items-center justify-center gap-2 mt-4 text-xs animate-fadeIn">
+                <span className="text-gray-400 font-bold uppercase tracking-wider text-[9px]">Recent searches:</span>
+                {recentSearches.map((search, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setInput(search)}
+                    className="px-3 py-1 bg-white/50 backdrop-blur-sm border border-gray-200/40 hover:bg-red-50 hover:text-red-600 text-gray-600 rounded-full font-medium transition duration-200 cursor-pointer shadow-sm"
+                  >
+                    {search}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
         </div>
       </div>

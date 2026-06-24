@@ -1,12 +1,14 @@
 // src/components/admin/Login.jsx
+import axios from "axios";
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';          // <-- add this
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import toast from 'react-hot-toast';
 
 const Login = () => {
-  const { axios, setToken } = useAppContext();
-  const navigate = useNavigate();                       // <-- hook for redirect
+  const { setToken } = useAppContext();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -40,8 +42,9 @@ const Login = () => {
 
         toast.success('Login successful!');
 
-        // 4. Redirect to the protected dashboard
-        navigate('/admin', { replace: true });
+        // 4. Redirect to the requested page or fallback to the protected dashboard
+        const from = location.state?.from?.pathname || '/admin';
+        navigate(from, { replace: true });
       } else {
         toast.error(data.message || 'Login failed');
       }

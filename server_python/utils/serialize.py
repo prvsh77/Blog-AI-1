@@ -34,15 +34,16 @@ def serialize_blog(doc):
 def serialize_comment(doc):
     if not doc:
         return None
+    blog_val = oid_str(doc.get("blog"))
+    if doc.get("blogDoc"):
+        blog_val = serialize_blog(doc.get("blogDoc"))
     out = {
         "_id": oid_str(doc.get("_id")),
-        "blog": oid_str(doc.get("blog")),
+        "blog": blog_val,
         "name": doc.get("name"),
         "content": doc.get("content"),
         "isApproved": doc.get("isApproved"),
         "createdAt": doc.get("createdAt"),
         "updatedAt": doc.get("updatedAt"),
     }
-    if doc.get("blogDoc"):
-        out["blogDoc"] = serialize_blog(doc.get("blogDoc"))
     return out
