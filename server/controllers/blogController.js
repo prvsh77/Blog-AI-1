@@ -5,7 +5,7 @@ import main from '../configs/gemini.js';
 import User from '../models/User.js';
 import { withReadTime } from '../utils/readingTime.js';
 import { buildPublishFields, isPubliclyVisible, resolveStatus, withStatus } from '../utils/publishStatus.js';
-import { resolveBlogImage } from '../utils/blogImage.js';
+import { resolveBlogImage, storeUploadedImage } from '../utils/blogImage.js';
 import { getAdminEmail } from '../middleware/auth.js';
 import { getUserIdFromToken } from '../middleware/userAuthMiddleware.js';
 import { assertPendingCapacity } from '../utils/pendingCap.js';
@@ -74,6 +74,67 @@ export const submitBlog = async (req, res) => {
             blogId: blog._id,
             message: requested === 'pending' ? 'Post submitted for review' : 'Draft saved'
         });
+    } catch (error) {
+        res.json({ success: false, message: error.message });
+    }
+};
+
+// PUT /api/blog/:id — req.blog/req.admin/req.user come from authorOrAdmin.
+// Content fields are updated in place; a new image replaces the old one, no file keeps it.
+// Status:
+//   admin  : unchanged unless a status is sent (same rules as /add)
+//   author : a live (or admin-scheduled) post goes back to 'pending' for re-approval;
+//            draft/pending stay as they are unless the author asks to switch between
+//            the two (submit/withdraw), which follows the same rules as toggle-publish.
+export const updateBlog = async (req, res) => {
+    try {
+        if (!req.body?.blog) {
+            return res.json({ success: false, message: "Missing blog payload" });
+        }
+        const { title, subTitle, description, category, status, publishAt } = JSON.parse(req.body.blog);
+        const blog = req.blog;
+
+        for (const [field, value] of Object.entries({ title, description, category })) {
+            if (value === undefined) continue;
+            if (typeof value !== 'string' || !value.trim()) {
+                return res.json({ success: false, message: `${field} cannot be empty` });
+            }
+            blog[field] = value;
+        }
+        if (subTitle !== undefined) blog.subTitle = subTitle;
+        if (req.file) blog.image = await storeUploadedImage(req.file, req);
+
+        const current = resolveStatus(blog);
+        let nextStatus = current;
+        let message = 'Post updated';
+
+        if (req.admin) {
+            if (status !== undefined) {
+                Object.assign(blog, buildPublishFields({ status, publishAt }));
+                nextStatus = blog.status;
+            }
+        } else {
+            blog.authorName = req.user.name;
+            if (isPubliclyVisible(blog) || current === 'scheduled') {
+                // Already approved once, so the cap doesn't apply to the re-review.
+                nextStatus = 'pending';
+                message = 'Post updated and sent for re-approval';
+            } else if (status !== undefined && status !== current) {
+                if (!AUTHOR_STATUSES.includes(status)) {
+                    return res.json({ success: false, message: "Authors can save a draft or submit for review; publishing and scheduling are done by the admin." });
+                }
+                if (status === 'pending') await assertPendingCapacity(req.user._id);
+                nextStatus = status;
+                message = status === 'pending' ? 'Post updated and submitted for review' : 'Post updated and moved to drafts';
+            }
+            if (nextStatus !== current) {
+                Object.assign(blog, buildPublishFields({ status: nextStatus }));
+                if (nextStatus === 'pending') blog.reviewNote = null;
+            }
+        }
+
+        await blog.save();
+        res.json({ success: true, status: nextStatus, message });
     } catch (error) {
         res.json({ success: false, message: error.message });
     }

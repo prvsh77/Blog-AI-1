@@ -16,7 +16,8 @@ import {
   getBookmarkedBlogs,
   toggleBookmark,
   submitBlog,
-  getMyBlogs
+  getMyBlogs,
+  updateBlog
 } from "../controllers/blogController.js";
 import upload from "../middleware/multer.js";
 import auth from "../middleware/auth.js";
@@ -37,6 +38,7 @@ blogRouter.get('/mine', userProtect, getMyBlogs);
 blogRouter.get('/:blogId', getBlogById);
 blogRouter.post('/delete', authorOrAdmin, deleteBlogById);
 blogRouter.post('/toggle-publish', authorOrAdmin, togglePublish);
+blogRouter.put('/:id', upload.single('image'), authorOrAdmin, updateBlog);
 blogRouter.post('/add-comment', addComment);
 blogRouter.post('/comments', getBlogComments);
 blogRouter.post('/give-topics', auth, getTopics);
