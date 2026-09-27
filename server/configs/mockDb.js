@@ -1,6 +1,7 @@
 // filepath: server/configs/mockDb.js
 import fs from 'fs';
 import path from 'path';
+import bcrypt from 'bcryptjs';
 
 const DB_FILE = path.join(process.cwd(), 'db_fallback.json');
 
@@ -96,6 +97,9 @@ function readDb() {
     // Dynamic schema migrations for existing JSON records
     if (!data.subscribers) {
       data.subscribers = [];
+    }
+    if (!data.users) {
+      data.users = [];
     }
     data.blogs = data.blogs.map(b => ({
       featured: false,
@@ -421,5 +425,141 @@ export const MockSubscriberModel = {
       });
     }
     return results.length;
+  }
+};
+
+// Single-document thenable so callers can chain .select()/.populate() the way
+// they do on a Mongoose query (e.g. User.findById(id).select('-password')).
+class MockDocQuery {
+  constructor(resolver) {
+    this.resolver = resolver;
+    this.includePassword = false; // schema has `select: false` on password
+    this.populateFields = [];
+  }
+
+  select(spec) {
+    if (typeof spec === 'string') {
+      if (spec.includes('+password')) this.includePassword = true;
+      else if (spec.includes('-password')) this.includePassword = false;
+    }
+    return this;
+  }
+
+  populate(field) {
+    this.populateFields.push(field);
+    return this;
+  }
+
+  then(resolve, reject) {
+    try {
+      resolve(this.resolver({ includePassword: this.includePassword, populateFields: this.populateFields }));
+    } catch (err) {
+      reject(err);
+    }
+  }
+}
+
+const USER_DEFAULTS = { avatar: 'https://i.pravatar.cc/150', bio: '', role: 'user', bookmarks: [], readingHistory: [] };
+
+function toUserDoc(stored, { includePassword, populateFields }, db) {
+  const { password, ...rest } = stored;
+  const data = { ...USER_DEFAULTS, ...rest };
+  if (includePassword) data.password = password;
+  if (populateFields.includes('bookmarks')) {
+    data.bookmarks = (stored.bookmarks || [])
+      .map(id => db.blogs.find(b => b._id === String(id)))
+      .filter(Boolean);
+  }
+  return new UserDoc(data);
+}
+
+class UserDoc {
+  constructor(data) {
+    Object.assign(this, data);
+  }
+
+  // Mirrors the Mongoose pre('save') hook: a changed password is re-hashed.
+  async save() {
+    const db = readDb();
+    const index = db.users.findIndex(u => u._id === this._id);
+    const stored = index !== -1 ? db.users[index] : {};
+
+    const raw = {};
+    for (const key of Object.keys(this)) {
+      if (typeof this[key] !== 'function') raw[key] = this[key];
+    }
+    if (Array.isArray(raw.bookmarks)) {
+      raw.bookmarks = raw.bookmarks.map(b => (b && typeof b === 'object' ? String(b._id) : String(b)));
+    }
+    if (raw.email) raw.email = String(raw.email).toLowerCase();
+    if (raw.password === undefined) {
+      raw.password = stored.password;
+    } else if (raw.password !== stored.password) {
+      raw.password = await bcrypt.hash(raw.password, await bcrypt.genSalt(10));
+    }
+    raw.updatedAt = new Date().toISOString();
+
+    const merged = { ...stored, ...raw };
+    if (index !== -1) db.users[index] = merged;
+    else db.users.push(merged);
+    writeDb(db);
+
+    const hadPassword = 'password' in this;
+    const { password, ...rest } = merged;
+    Object.assign(this, rest);
+    if (hadPassword) this.password = password;
+    return this;
+  }
+}
+
+export const MockUserModel = {
+  findOne: (query = {}) => new MockDocQuery((opts) => {
+    const db = readDb();
+    const keys = Object.keys(query);
+    const stored = db.users.find(u => keys.every(key => {
+      const expected = key === 'email' && typeof query[key] === 'string' ? query[key].toLowerCase() : query[key];
+      return u[key] === expected;
+    }));
+    return stored ? toUserDoc(stored, opts, db) : null;
+  }),
+
+  // Mongoose resolves findById(undefined)/findById(null) to null without querying.
+  findById: (id) => new MockDocQuery((opts) => {
+    if (id === undefined || id === null) return null;
+    const db = readDb();
+    const stored = db.users.find(u => u._id === String(id));
+    return stored ? toUserDoc(stored, opts, db) : null;
+  }),
+
+  create: async (data) => {
+    const { name, email, password } = data;
+    if (!name || !email || !password) {
+      throw new Error('User validation failed: name, email and password are required');
+    }
+    const db = readDb();
+    const normalizedEmail = String(email).toLowerCase();
+    if (db.users.some(u => u.email === normalizedEmail)) {
+      throw new Error(`E11000 duplicate key error: email "${normalizedEmail}" already exists`);
+    }
+    const now = new Date().toISOString();
+    const newUser = {
+      _id: 'user_' + Date.now() + Math.random().toString(36).substr(2, 5),
+      ...USER_DEFAULTS,
+      ...data,
+      email: normalizedEmail,
+      password: await bcrypt.hash(password, await bcrypt.genSalt(10)),
+      createdAt: now,
+      updatedAt: now
+    };
+    db.users.push(newUser);
+    writeDb(db);
+    // Like Mongoose, the created document carries the (hashed) password.
+    return new UserDoc({ ...newUser });
+  },
+
+  countDocuments: async (query = {}) => {
+    const db = readDb();
+    const keys = Object.keys(query);
+    return db.users.filter(u => keys.every(key => u[key] === query[key])).length;
   }
 };

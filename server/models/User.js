@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { MockUserModel } from '../configs/mockDb.js';
 
 const userSchema = new mongoose.Schema({
     name: {
@@ -53,4 +54,16 @@ userSchema.pre('save', async function (next) {
 
 const User = mongoose.model('User', userSchema);
 
-export default User;
+// Same fallback shape as Blog/Comment/Subscriber: offline, route every call to the JSON mock.
+const UserProxy = new Proxy(User, {
+    get(target, prop) {
+        if (global.isMockDB) {
+            const val = Reflect.get(MockUserModel, prop);
+            return typeof val === 'function' ? val.bind(MockUserModel) : val;
+        }
+        const val = Reflect.get(target, prop);
+        return typeof val === 'function' ? val.bind(target) : val;
+    }
+});
+
+export default UserProxy;
