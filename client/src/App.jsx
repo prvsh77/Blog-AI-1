@@ -15,11 +15,20 @@ import { Toaster } from 'react-hot-toast';
 import { useAppContext } from './context/AppContext';
 import Profile from "./pages/Profile";
 import Bookmarks from "./pages/Bookmarks";
+import WritePost from "./pages/WritePost";
+import MyPosts from "./pages/MyPosts";
 // PrivateRoute component: protects specific routes
 const PrivateRoute = ({ children }) => {
   const { token } = useAppContext();
   const location = useLocation();
   return token ? children : <Navigate to="/admin/login" state={{ from: location }} replace />;
+};
+
+// Same idea for signed-in regular users (author pages).
+const UserRoute = ({ children }) => {
+  const { userToken } = useAppContext();
+  const location = useLocation();
+  return userToken ? children : <Navigate to="/login" state={{ from: location }} replace />;
 };
 
 const App = () => {
@@ -45,6 +54,9 @@ const App = () => {
           <Route path="/register" element={<Register />} /> 
           <Route path="/profile" element={<Profile />} />
           <Route path="/bookmarks" element={<Bookmarks />} />
+          <Route path="/write" element={<UserRoute><WritePost /></UserRoute>} />
+          <Route path="/write/:id" element={<UserRoute><WritePost /></UserRoute>} />
+          <Route path="/my-posts" element={<UserRoute><MyPosts /></UserRoute>} />
           {/* Login page */}
           <Route path="/admin/login" element={<AdminLogin />} />
 

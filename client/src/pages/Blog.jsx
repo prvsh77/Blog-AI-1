@@ -289,6 +289,17 @@ const Blog = () => {
 
   const coverImage = data ? data.image || getCategoryImage(data.category) : '';
 
+  // Author attribution: posts written by users carry an authorName snapshot;
+  // admin/legacy posts have none and are credited to the editorial team.
+  const authorDisplay = data?.authorName || 'Editorial team';
+  const authorInitials = data?.authorName
+    ? data.authorName.trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
+    : 'ED';
+  const authorRole = data?.authorName ? 'Community author' : 'Blog-AI editorial';
+  const authorBio = data?.authorName
+    ? `Articles written and submitted by ${data.authorName}, reviewed by the editorial team before publishing.`
+    : 'Articles written and curated by the Blog-AI editorial team.';
+
   return isLoading ? <Loader /> : data ? (
     <div className="relative min-h-screen bg-transparent pb-8">
       <Helmet>
@@ -305,7 +316,7 @@ const Blog = () => {
         <meta property="og:image" content={coverImage} />
         <meta property="og:site_name" content="Blog-AI" />
         <meta property="article:published_time" content={data.createdAt} />
-        <meta property="article:author" content="Prashant Rao" />
+        <meta property="article:author" content={authorDisplay} />
         <meta property="article:section" content={data.category} />
 
         {/* Twitter */}
@@ -427,12 +438,12 @@ const Blog = () => {
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-pink-600 p-0.5 rounded-full flex items-center justify-center shadow-lg">
                 <div className="w-full h-full bg-slate-950 rounded-full flex items-center justify-center text-white font-bold">
-                  PR
+                  {authorInitials}
                 </div>
               </div>
               <div>
-                <p className="text-white font-semibold tracking-wide text-sm sm:text-base">Prashant Rao</p>
-                <p className="text-white/60 text-xs sm:text-sm">Content Creator</p>
+                <p className="text-white font-semibold tracking-wide text-sm sm:text-base" data-author-name>{authorDisplay}</p>
+                <p className="text-white/60 text-xs sm:text-sm">{authorRole}</p>
               </div>
             </div>
           </div>
@@ -492,14 +503,14 @@ const Blog = () => {
           <div className="mt-12 p-6 sm:p-8 bg-slate-50 border border-gray-150 rounded-2xl flex flex-col sm:flex-row items-center gap-6 shadow-sm">
             <div className="w-16 h-16 bg-gradient-to-br from-red-500 via-rose-500 to-orange-500 p-0.5 rounded-full flex items-center justify-center shadow-md flex-shrink-0">
               <div className="w-full h-full bg-slate-900 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                PR
+                {authorInitials}
               </div>
             </div>
             <div className="text-center sm:text-left">
-              <p className="text-xs font-bold text-red-500 uppercase tracking-wider mb-1">Posted by Prashant Rao</p>
-              <h4 className="text-lg font-bold text-gray-900">Prashant Rao</h4>
+              <p className="text-xs font-bold text-red-500 uppercase tracking-wider mb-1">Posted by {authorDisplay}</p>
+              <h4 className="text-lg font-bold text-gray-900">{authorDisplay}</h4>
               <p className="text-gray-655 text-sm mt-1 leading-relaxed">
-                AI Engineer | Machine Learning Enthusiast | Full-Stack Developer
+                {authorBio}
               </p>
             </div>
           </div>

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAppContext } from '../context/AppContext';
 
 const Login = () => {
 const { userLogin } = useAppContext();
 const navigate = useNavigate();
+const location = useLocation();
 
 const [email, setEmail] = useState('');
 const [password, setPassword] = useState('');
@@ -24,7 +25,8 @@ try {
   });
 
   toast.success('Login successful');
-  navigate('/');
+  // Back to the page that required login (e.g. /write), else home.
+  navigate(location.state?.from?.pathname || '/');
 
 } catch (error) {
   console.error(error);

@@ -16,7 +16,7 @@ const normalizeCategory = (cat) => {
 };
 
 const BlogCard = ({ blog, index, axios, userToken }) => {
-  const { title, description, category, image, _id, subTitle, readTime } = blog
+  const { title, description, category, image, _id, subTitle, readTime, authorName } = blog
   const navigate = useNavigate()
   
   // Clean description HTML to plain text in case subTitle is missing
@@ -93,6 +93,9 @@ const BlogCard = ({ blog, index, axios, userToken }) => {
           <h3 className="font-bold text-lg sm:text-xl mb-2 leading-snug group-hover:text-red-600 transition-colors duration-300 line-clamp-2">
             {title}
           </h3>
+          {authorName && (
+            <p className="text-xs text-gray-500 mb-2">by {authorName}</p>
+          )}
           {cleanSubTitle && (
             <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 font-normal mb-4">
               {cleanSubTitle}
