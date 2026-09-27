@@ -26,20 +26,25 @@ const BlogTableItem = ({blog, fetchBlogs, index}) => {
       }
     }
 
-    //  const togglePublish = async () =>{
-    //   try {
-    //     const { data } = await axios.post(`${import.meta.env.VITE_BASE_URL}/api/blog/toggle-publish`, {id: blog._id})
-    //     if (data.success){
-    //         toast.success(data.message)
-    //         await fetchBlogs()
-    //       }else{
-    //         toast.error(data.message)
-    //       }
-    //   } catch (error) {
-    //     toast.error(error.message)
-    //   }
-      
-    //  }
+    const togglePublish = async () =>{
+      try {
+        const { data } = await axios.post(`${import.meta.env.VITE_BASE_URL}/api/blog/toggle-publish`, {id: blog._id})
+        if (data.success){
+          toast.success(data.message)
+          await fetchBlogs()
+        }else{
+          toast.error(data.message)
+        }
+      } catch (error) {
+        toast.error(error.message)
+      }
+    }
+
+    const badge = blog.isLive
+      ? { label: 'Published', className: 'text-green-600' }
+      : blog.status === 'scheduled'
+        ? { label: `Scheduled · ${new Date(blog.publishAt).toLocaleString()}`, className: 'text-blue-600' }
+        : { label: 'Draft', className: 'text-orange-700' };
 
   return (
     <tr className='border-y border-gray-300'>
@@ -47,11 +52,10 @@ const BlogTableItem = ({blog, fetchBlogs, index}) => {
       <td className='px-2 py-4'> {title} </td>
       <td className='px-2 py-4 max-sm:hidden'> {BlogDate.toDateString()} </td>
       <td className='px-2 py-4 max-sm:hidden'> 
-        <p className={`${blog.isPublished ? "text-green-600" : "text-orange-700"}`}
-        >{blog.isPublished ? 'Published' : 'Unpublished'}</p>
+        <p className={badge.className}>{badge.label}</p>
       </td>
       <td className='px-2 py-4 flex text-xs gap-3'>
-        {/* <button onClick={togglePublish} className='border px-2 py-0.5 mt-1 rounded cursor-pointer'>{blog.isPublished ? 'Unpublish' : 'Publish'}</button> */}
+        <button onClick={togglePublish} className='border px-2 py-0.5 mt-1 rounded cursor-pointer'>{blog.isLive ? 'Unpublish' : 'Publish now'}</button>
         <img src={assets.cross_icon} className='w-8 hover:scale-110 transition-all cursor-pointer' alt="" onClick={deleteBlog}/>
       </td>
     </tr>

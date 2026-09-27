@@ -7,7 +7,11 @@ const blogSchema = new mongoose.Schema({
     description: {type: String, required: true},
     category: {type: String, required: true},
     image: {type: String, required: true},
-    isPublished: {type: Boolean, required: true},
+    // Legacy flag, kept in sync on writes; status/publishAt are the source of truth.
+    isPublished: {type: Boolean, default: false},
+    // No default: a default would be applied to old documents on load and mask their isPublished value.
+    status: {type: String, enum: ['draft', 'scheduled', 'published']},
+    publishAt: {type: Date},
     featured: {type: Boolean, default: false},
     tags: {type: [String], default: []},
     views: {type: Number, default: 0},

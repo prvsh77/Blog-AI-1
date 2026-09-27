@@ -15,7 +15,6 @@ import { Toaster } from 'react-hot-toast';
 import { useAppContext } from './context/AppContext';
 import Profile from "./pages/Profile";
 import Bookmarks from "./pages/Bookmarks";
-import CreateBlog from "./pages/CreateBlog";
 // PrivateRoute component: protects specific routes
 const PrivateRoute = ({ children }) => {
   const { token } = useAppContext();
@@ -46,8 +45,6 @@ const App = () => {
           <Route path="/register" element={<Register />} /> 
           <Route path="/profile" element={<Profile />} />
           <Route path="/bookmarks" element={<Bookmarks />} />
-          <Route path="/create-blog" element={<CreateBlog />}
-/>
           {/* Login page */}
           <Route path="/admin/login" element={<AdminLogin />} />
 

@@ -6,9 +6,16 @@ import Subscriber from '../models/Subscriber.js';
 import main from '../configs/gemini.js';
 import User from '../models/User.js';
 import { withReadTime } from '../utils/readingTime.js';
+import { buildPublishFields, isPubliclyVisible } from '../utils/publishStatus.js';
+import { getAdminEmail } from '../middleware/auth.js';
+
+// Admins can open drafts and not-yet-due scheduled posts (preview); everyone else can't.
+const canView = (blog, req) => isPubliclyVisible(blog) || Boolean(getAdminEmail(req.headers.authorization));
+
 export const addBlog = async (req, res)=>{
     try {
-        const {title, subTitle, description, category, isPublished} = JSON.parse(req.body.blog);
+        const {title, subTitle, description, category, isPublished, status, publishAt} = JSON.parse(req.body.blog);
+        const publishFields = buildPublishFields({ status, publishAt, isPublished });
         const imageFile = req.file;
 
         // Check if required text fields are present
@@ -59,7 +66,7 @@ export const addBlog = async (req, res)=>{
             image = categoryImages[category] || categoryImages.Technology;
         }
 
-        await Blog.create({title, subTitle, description, category, image, isPublished})
+        await Blog.create({title, subTitle, description, category, image, ...publishFields})
 
         res.json({success: true, message: "Blog added successfully"})
 
@@ -70,7 +77,9 @@ export const addBlog = async (req, res)=>{
 
 export const getAllBlogs = async (req, res)=>{
     try {
-        const blogs = await Blog.find({isPublished: true})
+        // Filtered in JS, not in the query: the mock-DB fallback only supports equality matches.
+        const now = new Date();
+        const blogs = (await Blog.find({})).filter(b => isPubliclyVisible(b, now))
         res.json({success: true, blogs: blogs.map(withReadTime)})
     } catch (error) {
         res.json({success: false, message: error.message})
@@ -103,7 +112,7 @@ export const getBlogById = async (req, res) =>{
             });
         }
 
-        if(!blog){
+        if(!blog || !canView(blog, req)){
             return res.json({ success: false, message: "Blog not found" });
         }
         res.json({success: true, blog: withReadTime(blog)})
@@ -130,9 +139,14 @@ export const togglePublish = async (req, res) =>{
     try {
         const { id } = req.body;
         const blog = await Blog.findById(id);
-        blog.isPublished = !blog.isPublished;
+        if (!blog) {
+            return res.json({ success: false, message: "Blog not found" });
+        }
+        // Live posts (published, or scheduled and due) go back to draft; anything else goes live now.
+        const fields = buildPublishFields({ status: isPubliclyVisible(blog) ? 'draft' : 'published' });
+        Object.assign(blog, fields);
         await blog.save();
-        res.json({success: true, message: 'Blog status updated'})
+        res.json({success: true, message: fields.status === 'published' ? 'Blog published' : 'Blog moved to drafts'})
     } catch (error) {
         res.json({success: false, message: error.message})
     }
@@ -221,14 +235,15 @@ export const getTopics = async (req, res) => {
 export const getRelatedBlogs = async (req, res) => {
     try {
         const { category, exclude } = req.query;
-        const allBlogs = await Blog.find({ isPublished: true });
-        
+        const allBlogs = await Blog.find({});
+
         let targetBlog = null;
         if (exclude) {
             targetBlog = allBlogs.find(b => b._id.toString() === exclude);
         }
 
-        let related = allBlogs;
+        const now = new Date();
+        let related = allBlogs.filter(b => isPubliclyVisible(b, now));
         if (exclude) {
             related = related.filter(b => b._id.toString() !== exclude);
         }
@@ -279,7 +294,7 @@ export const incrementViews = async (req, res) => {
     try {
         const { blogId } = req.params;
         const blog = await Blog.findById(blogId);
-        if (!blog) {
+        if (!blog || !canView(blog, req)) {
             return res.json({ success: false, message: "Blog not found" });
         }
         blog.views = (blog.views || 0) + 1;
@@ -295,7 +310,7 @@ export const askAiAboutArticle = async (req, res) => {
         const { blogId } = req.params;
         const { question } = req.body;
         const blog = await Blog.findById(blogId);
-        if (!blog) {
+        if (!blog || !canView(blog, req)) {
             return res.json({ success: false, message: "Blog not found" });
         }
         
@@ -366,9 +381,10 @@ export const getBookmarkedBlogs = async (req, res) => {
         const user = await User.findById(req.user._id)
             .populate('bookmarks');
 
+        const now = new Date();
         res.json({
             success: true,
-            blogs: user.bookmarks
+            blogs: user.bookmarks.filter(b => b && isPubliclyVisible(b, now))
         });
 
     } catch (error) {

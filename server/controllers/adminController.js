@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken'
 import Blog from '../models/Blog.js';
 import Comment from '../models/Comment.js';
 import Subscriber from '../models/Subscriber.js';
+import { resolveStatus, withStatus } from '../utils/publishStatus.js';
 
 export const adminLogin = async (req, res)=>{
     try {
@@ -25,7 +26,7 @@ export const adminLogin = async (req, res)=>{
 export const getAllBlogsAdmin = async (req, res) =>{
     try {
         const blogs = await Blog.find({}).sort({createdAt: -1});
-        res.json({success: true, blogs})
+        res.json({success: true, blogs: blogs.map(withStatus)})
     } catch (error) {
         res.json({success: false, message: error.message})
     }
@@ -43,12 +44,14 @@ export const getAllComments = async (req, res) =>{
 export const getDashboard = async (req, res) =>{
     try {
         const recentBlogs = await Blog.find({}).sort({ createdAt: -1 }).limit(5);
-        const blogs = await Blog.countDocuments();
+        const allBlogs = await Blog.find({});
+        const blogs = allBlogs.length;
         const comments = await Comment.countDocuments()
-        const drafts = await Blog.countDocuments({isPublished: false})
+        // Counted in JS: legacy records only carry isPublished, and the mock DB can't query status.
+        const drafts = allBlogs.filter(b => resolveStatus(b) === 'draft').length
 
         const dashboardData = {
-            blogs, comments, drafts, recentBlogs
+            blogs, comments, drafts, recentBlogs: recentBlogs.map(withStatus)
         }
         res.json({success: true, dashboardData})
     } catch (error) {
