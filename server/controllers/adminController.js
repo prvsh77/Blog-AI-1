@@ -11,12 +11,6 @@ export const adminLogin = async (req, res)=>{
         const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
         const jwtSecret = process.env.JWT_SECRET || "your_jwt_secret_key_here";
 
-                console.log("========== LOGIN DEBUG ==========");
-        console.log("Entered Email:", email);
-        console.log("Entered Password:", password);
-        console.log("Admin Email:", adminEmail);
-        console.log("Admin Password:", adminPassword);
-        console.log("=================================");
         if(email !== adminEmail || password !== adminPassword){
             return res.json({success: false, message: "Invalid Credentials"})
         }
