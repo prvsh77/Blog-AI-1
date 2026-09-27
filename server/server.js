@@ -3,7 +3,6 @@ import dotenv from "dotenv";
 import cors from 'cors';
 import connectDB from './configs/db.js';
 import adminRouter from './routes/adminRoutes.js';
-import aiRouter from './routes/aiRoutes.js';
 import blogRouter from './routes/blogRoutes.js';
 import userRouter from './routes/userRoutes.js';
 dotenv.config();
@@ -32,7 +31,6 @@ app.use('/uploads', express.static('uploads'))
 // Routes
 app.get('/', (req, res)=> res.send("API is Working"))
 app.use('/api/admin', adminRouter)
-app.use('/api/ai', aiRouter)
 app.use('/api/blog', blogRouter)
 app.use('/api/user', userRouter)
 
