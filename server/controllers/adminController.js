@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken'
 import Blog from '../models/Blog.js';
 import Comment from '../models/Comment.js';
 import Subscriber from '../models/Subscriber.js';
-import { resolveStatus, withStatus } from '../utils/publishStatus.js';
+import { resolveStatus, withStatus, buildPublishFields } from '../utils/publishStatus.js';
 
 export const adminLogin = async (req, res)=>{
     try {
@@ -49,13 +49,54 @@ export const getDashboard = async (req, res) =>{
         const comments = await Comment.countDocuments()
         // Counted in JS: legacy records only carry isPublished, and the mock DB can't query status.
         const drafts = allBlogs.filter(b => resolveStatus(b) === 'draft').length
+        const pending = allBlogs.filter(b => resolveStatus(b) === 'pending').length
 
         const dashboardData = {
-            blogs, comments, drafts, recentBlogs: recentBlogs.map(withStatus)
+            blogs, comments, drafts, pending, recentBlogs: recentBlogs.map(withStatus)
         }
         res.json({success: true, dashboardData})
     } catch (error) {
         res.json({success: false, message: error.message})
+    }
+}
+
+// Review queue action on a pending post: approve -> published, reject -> draft + reviewNote.
+export const reviewBlog = async (req, res) => {
+    try {
+        const { id, action, reviewNote } = req.body;
+        if (!['approve', 'reject'].includes(action)) {
+            return res.json({ success: false, message: "action must be 'approve' or 'reject'" });
+        }
+        let blog = null;
+        try {
+            if (id) blog = await Blog.findById(id);
+        } catch {
+            // malformed ObjectId -> not found
+        }
+        if (!blog) {
+            return res.json({ success: false, message: 'Blog not found' });
+        }
+        if (resolveStatus(blog) !== 'pending') {
+            return res.json({ success: false, message: 'Only posts awaiting review can be approved or rejected' });
+        }
+
+        if (action === 'approve') {
+            Object.assign(blog, buildPublishFields({ status: 'published' }));
+            blog.reviewNote = null;
+        } else {
+            Object.assign(blog, buildPublishFields({ status: 'draft' }));
+            const note = typeof reviewNote === 'string' ? reviewNote.trim() : '';
+            blog.reviewNote = note || null;
+        }
+        await blog.save();
+
+        res.json({
+            success: true,
+            status: blog.status,
+            message: action === 'approve' ? 'Post approved and published' : 'Post sent back to the author as a draft'
+        });
+    } catch (error) {
+        res.json({ success: false, message: error.message });
     }
 }
 

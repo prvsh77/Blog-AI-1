@@ -11,6 +11,6 @@ export const assertPendingCapacity = async (authorId) => {
     const limit = maxPendingPerUser();
     const pending = await Blog.countDocuments({ author: authorId, status: 'pending' });
     if (pending >= limit) {
-        throw new Error(`You already have ${pending} post${pending === 1 ? '' : 's'} awaiting review (limit ${limit}). Wait for a review before submitting more.`);
+        throw new Error(`You already have ${pending} post${pending === 1 ? '' : 's'} awaiting review — the limit is ${limit}. Wait for a review before submitting more.`);
     }
 };

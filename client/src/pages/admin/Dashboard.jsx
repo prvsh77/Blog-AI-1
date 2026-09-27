@@ -10,10 +10,11 @@ const Dashboard = () => {
         blogs: 0,
         comments: 0,
         drafts: 0,
+        pending: 0,
         recentBlogs: []
     })
 
-    const { axios } = useAppContext()
+    const { axios, navigate } = useAppContext()
 
      const fetchDashboard = async ()=>{
        try {
@@ -54,6 +55,14 @@ const Dashboard = () => {
                 <div>
                     <p className='text-xl font-semibold text-gray-800'>{dashboardData.drafts}</p>
                     <p className='text-gray-500 font-normal'>Drafts</p>
+                </div>
+            </div>
+
+            <div className='flex items-center gap-4 glass-card p-5 min-w-58 rounded-xl cursor-pointer' onClick={() => navigate('/admin/listBlog')}>
+                <img src={assets.dashboard_icon_4} alt="" />
+                <div>
+                    <p className='text-xl font-semibold text-gray-800'>{dashboardData.pending}</p>
+                    <p className='text-gray-500 font-normal'>Pending review</p>
                 </div>
             </div>
         </div>
