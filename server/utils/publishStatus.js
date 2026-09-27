@@ -1,4 +1,6 @@
-export const STATUSES = ['draft', 'scheduled', 'published'];
+// 'pending' = submitted by an author, awaiting admin review. Hidden from the
+// public exactly like a draft; isPubliclyVisible only opens published/due posts.
+export const STATUSES = ['draft', 'pending', 'scheduled', 'published'];
 
 // Records written before `status` existed only have isPublished.
 export const resolveStatus = (blog) => {
@@ -29,6 +31,9 @@ export const buildPublishFields = ({ status, publishAt, isPublished }) => {
     }
     if (resolved === 'published') {
         return { status: 'published', publishAt: new Date(), isPublished: true };
+    }
+    if (resolved === 'pending') {
+        return { status: 'pending', publishAt: null, isPublished: false };
     }
     return { status: 'draft', publishAt: null, isPublished: false };
 };
