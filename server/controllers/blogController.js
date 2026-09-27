@@ -1,12 +1,11 @@
-import fs from 'fs'
-import imagekit from '../configs/imageKit.js';
 import Blog from '../models/Blog.js';
 import Comment from '../models/Comment.js';
 import Subscriber from '../models/Subscriber.js';
 import main from '../configs/gemini.js';
 import User from '../models/User.js';
 import { withReadTime } from '../utils/readingTime.js';
-import { buildPublishFields, isPubliclyVisible, resolveStatus } from '../utils/publishStatus.js';
+import { buildPublishFields, isPubliclyVisible, resolveStatus, withStatus } from '../utils/publishStatus.js';
+import { resolveBlogImage } from '../utils/blogImage.js';
 import { getAdminEmail } from '../middleware/auth.js';
 import { getUserIdFromToken } from '../middleware/userAuthMiddleware.js';
 import { assertPendingCapacity } from '../utils/pendingCap.js';
@@ -24,55 +23,12 @@ export const addBlog = async (req, res)=>{
     try {
         const {title, subTitle, description, category, isPublished, status, publishAt} = JSON.parse(req.body.blog);
         const publishFields = buildPublishFields({ status, publishAt, isPublished });
-        const imageFile = req.file;
-
         // Check if required text fields are present
         if(!title || !description || !category){
             return res.json({success: false, message: "Missing required fields (title, description, or category)" })
         }
 
-        let image = '';
-        if (imageFile) {
-            if (process.env.IMAGEKIT_PRIVATE_KEY && process.env.IMAGEKIT_PRIVATE_KEY.trim() !== '') {
-                const fileBuffer = fs.readFileSync(imageFile.path)
-
-                // Upload Image to ImageKit
-                const response = await imagekit.upload({
-                    file: fileBuffer,
-                    fileName: imageFile.originalname,
-                    folder: "/blogs"
-                })
-
-                // optimization through imagekit URL transformation
-                const optimizedImageUrl = imagekit.url({
-                    path: response.filePath,
-                    transformation: [
-                        {quality: 'auto'}, // Auto compression
-                        {format: 'webp'},  // Convert to modern format
-                        {width: '1280'}    // Width resizing
-                    ]
-                });
-
-                image = optimizedImageUrl;
-            } else {
-                // Local file storage fallback
-                if (!fs.existsSync('uploads')) {
-                    fs.mkdirSync('uploads');
-                }
-                const localPath = `uploads/${Date.now()}_${imageFile.originalname}`;
-                fs.copyFileSync(imageFile.path, localPath);
-                image = `${req.protocol}://${req.get('host')}/${localPath}`;
-            }
-        } else {
-            // Default high-quality stock image fallback based on category
-            const categoryImages = {
-                Technology: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1280&q=80',
-                Startups: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1280&q=80',
-                Lifestyle: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=1280&q=80',
-                Finance: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=1280&q=80'
-            };
-            image = categoryImages[category] || categoryImages.Technology;
-        }
+        const image = await resolveBlogImage({ file: req.file, category, req });
 
         await Blog.create({title, subTitle, description, category, image, ...publishFields})
 
@@ -82,6 +38,56 @@ export const addBlog = async (req, res)=>{
         res.json({success: false, message: error.message})
     }
 }
+
+const AUTHOR_STATUSES = ['draft', 'pending'];
+
+// Regular users (userProtect) create posts here. They may save a private draft
+// or submit for review; publishing and scheduling are admin actions only.
+export const submitBlog = async (req, res) => {
+    try {
+        if (!req.body?.blog) {
+            return res.json({ success: false, message: "Missing blog payload" });
+        }
+        const { title, subTitle, description, category, status } = JSON.parse(req.body.blog);
+        if (!title || !description || !category) {
+            return res.json({ success: false, message: "Missing required fields (title, description, or category)" });
+        }
+        const requested = status || 'pending';
+        if (!AUTHOR_STATUSES.includes(requested)) {
+            return res.json({ success: false, message: "Authors can save a draft or submit for review; publishing and scheduling are done by the admin." });
+        }
+        if (requested === 'pending') {
+            await assertPendingCapacity(req.user._id);
+        }
+
+        const image = await resolveBlogImage({ file: req.file, category, req });
+        const blog = await Blog.create({
+            title, subTitle, description, category, image,
+            author: req.user._id,
+            authorName: req.user.name,
+            ...buildPublishFields({ status: requested })
+        });
+
+        res.json({
+            success: true,
+            status: requested,
+            blogId: blog._id,
+            message: requested === 'pending' ? 'Post submitted for review' : 'Draft saved'
+        });
+    } catch (error) {
+        res.json({ success: false, message: error.message });
+    }
+};
+
+// The signed-in author's own posts, every status, newest first.
+export const getMyBlogs = async (req, res) => {
+    try {
+        const blogs = await Blog.find({ author: req.user._id }).sort({ createdAt: -1 });
+        res.json({ success: true, blogs: blogs.map(withStatus) });
+    } catch (error) {
+        res.json({ success: false, message: error.message });
+    }
+};
 
 export const getAllBlogs = async (req, res)=>{
     try {

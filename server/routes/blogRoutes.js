@@ -14,7 +14,9 @@ import {
   askAiAboutArticle,
   subscribeNewsletter,
   getBookmarkedBlogs,
-  toggleBookmark
+  toggleBookmark,
+  submitBlog,
+  getMyBlogs
 } from "../controllers/blogController.js";
 import upload from "../middleware/multer.js";
 import auth from "../middleware/auth.js";
@@ -30,6 +32,8 @@ blogRouter.post('/subscribe', subscribeNewsletter);
 blogRouter.post('/:blogId/view', incrementViews);
 blogRouter.post('/:blogId/ask-ai', askAiAboutArticle);
 blogRouter.get("/bookmarks",userProtect,getBookmarkedBlogs);
+blogRouter.post('/submit', upload.single('image'), userProtect, submitBlog);
+blogRouter.get('/mine', userProtect, getMyBlogs);
 blogRouter.get('/:blogId', getBlogById);
 blogRouter.post('/delete', authorOrAdmin, deleteBlogById);
 blogRouter.post('/toggle-publish', authorOrAdmin, togglePublish);
