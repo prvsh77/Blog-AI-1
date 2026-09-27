@@ -1,6 +1,9 @@
 import jwt from "jsonwebtoken";
-import User from "../models/User.js";
 
+// Verifies the admin session token issued by adminController.adminLogin.
+// That token is signed with only { email } (there is no backing User document
+// for the admin account, since admin credentials come from env vars), so this
+// middleware checks the email claim instead of looking up a user by id.
 const auth = async (req, res, next) => {
     try {
 
@@ -20,16 +23,16 @@ const auth = async (req, res, next) => {
             process.env.JWT_SECRET
         );
 
-        const user = await User.findById(decoded.id);
+        const adminEmail = process.env.ADMIN_EMAIL || "admin@example.com";
 
-        if (!user) {
+        if (!decoded.email || decoded.email !== adminEmail) {
             return res.json({
                 success: false,
-                message: "User not found"
+                message: "Invalid or expired token"
             });
         }
 
-        req.user = user;
+        req.admin = { email: decoded.email };
 
         next();
 

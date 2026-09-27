@@ -27,4 +27,4 @@ const BlogProxy = new Proxy(Blog, {
     }
 });
 
-export default Blog;
+export default BlogProxy;

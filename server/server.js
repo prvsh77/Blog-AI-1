@@ -7,6 +7,15 @@ import aiRouter from './routes/aiRoutes.js';
 import blogRouter from './routes/blogRoutes.js';
 import userRouter from './routes/userRoutes.js';
 dotenv.config();
+
+if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
+    console.warn(
+        'WARNING: ADMIN_EMAIL and/or ADMIN_PASSWORD are not set in the environment. ' +
+        'Falling back to insecure default admin credentials (admin@example.com / admin123). ' +
+        'Set both in server/.env before deploying anywhere but local development.'
+    );
+}
+
 const app = express();
 connectDB()
 
