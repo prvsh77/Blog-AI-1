@@ -38,7 +38,7 @@ const Login = () => {
         localStorage.setItem('token', data.token);
 
         // 3. Attach token to every future request
-        axios.defaults.headers.common['Authorization'] = data.token;
+        axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
 
         toast.success('Login successful!');
 

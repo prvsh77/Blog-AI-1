@@ -6,7 +6,7 @@ import { useAppContext } from '../../context/AppContext'
 
 const Layout = () => {
 
-    const {setToken, navigate} = useAppContext()
+    const {setToken, navigate, axios} = useAppContext()
 
     const logout = ()=>{
         localStorage.removeItem('token');
