@@ -5,6 +5,7 @@ import Comment from '../models/Comment.js';
 import Subscriber from '../models/Subscriber.js';
 import main from '../configs/gemini.js';
 import User from '../models/User.js';
+import { withReadTime } from '../utils/readingTime.js';
 export const addBlog = async (req, res)=>{
     try {
         const {title, subTitle, description, category, isPublished} = JSON.parse(req.body.blog);
@@ -70,7 +71,7 @@ export const addBlog = async (req, res)=>{
 export const getAllBlogs = async (req, res)=>{
     try {
         const blogs = await Blog.find({isPublished: true})
-        res.json({success: true, blogs})
+        res.json({success: true, blogs: blogs.map(withReadTime)})
     } catch (error) {
         res.json({success: false, message: error.message})
     }
@@ -105,7 +106,7 @@ export const getBlogById = async (req, res) =>{
         if(!blog){
             return res.json({ success: false, message: "Blog not found" });
         }
-        res.json({success: true, blog})
+        res.json({success: true, blog: withReadTime(blog)})
     } catch (error) {
         res.json({success: false, message: error.message})
     }

@@ -16,7 +16,7 @@ const normalizeCategory = (cat) => {
 };
 
 const BlogCard = ({ blog, index, axios, userToken }) => {
-  const { title, description, category, image, _id, subTitle } = blog
+  const { title, description, category, image, _id, subTitle, readTime } = blog
   const navigate = useNavigate()
   
   // Clean description HTML to plain text in case subTitle is missing
@@ -102,7 +102,10 @@ const BlogCard = ({ blog, index, axios, userToken }) => {
         
         {/* Read More Trigger */}
         <div className="flex items-center justify-between mt-2 pt-3 border-t border-black/5">
-          <span className="text-xs font-semibold text-red-500 group-hover:text-red-600 transition-colors duration-300">Read Article</span>
+          <div className="flex items-center gap-2 text-xs">
+            <span className="font-semibold text-red-500 group-hover:text-red-600 transition-colors duration-300">Read Article</span>
+            {readTime && <span className="text-gray-500">· {readTime} min read</span>}
+          </div>
           <div className="w-7 h-7 bg-red-500/10 rounded-full flex items-center justify-center group-hover:bg-red-500 transition-all duration-300">
             <svg className="w-3.5 h-3.5 text-red-500 group-hover:text-white transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />

@@ -1,5 +1,5 @@
 import axios from "axios";
-import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react'
+import React, { useEffect, useState, useMemo, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import Moment from 'moment'
@@ -250,14 +250,6 @@ const Blog = () => {
     setHeadings(extractedHeadings);
   }, [displayDescription]);
 
-  // Helper to estimate reading time
-  const getReadingTime = useCallback(() => {
-    if (!displayDescription) return 1
-    const text = displayDescription.replace(/<[^>]*>/g, ' ')
-    const words = text.trim().split(/\s+/).filter(Boolean).length
-    return Math.ceil(words / 200) || 1
-  }, [displayDescription]);
-
   // Memoize the parsed description to avoid re-parsing on every render
   const parsedDescription = useMemo(() => {
     if (!displayDescription) return null;
@@ -413,8 +405,12 @@ const Blog = () => {
             <span>{normalizeCategory(data.category || 'Article')}</span>
             <span className="text-white/40">•</span>
             <span>{Moment(data.createdAt).format('MMM DD, YYYY')}</span>
-            <span className="text-white/40">•</span>
-            <span className="text-red-300 font-bold">{getReadingTime()} min read</span>
+            {data.readTime && (
+              <>
+                <span className="text-white/40">•</span>
+                <span className="text-red-300 font-bold">{data.readTime} min read</span>
+              </>
+            )}
           </div>
           
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight tracking-tight drop-shadow-md">
