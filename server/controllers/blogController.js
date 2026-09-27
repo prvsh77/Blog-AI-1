@@ -6,11 +6,19 @@ import Subscriber from '../models/Subscriber.js';
 import main from '../configs/gemini.js';
 import User from '../models/User.js';
 import { withReadTime } from '../utils/readingTime.js';
-import { buildPublishFields, isPubliclyVisible } from '../utils/publishStatus.js';
+import { buildPublishFields, isPubliclyVisible, resolveStatus } from '../utils/publishStatus.js';
 import { getAdminEmail } from '../middleware/auth.js';
+import { getUserIdFromToken } from '../middleware/userAuthMiddleware.js';
+import { assertPendingCapacity } from '../utils/pendingCap.js';
 
-// Admins can open drafts and not-yet-due scheduled posts (preview); everyone else can't.
-const canView = (blog, req) => isPubliclyVisible(blog) || Boolean(getAdminEmail(req.headers.authorization));
+// Hidden posts (draft/pending/not-yet-due) are viewable by the admin and by the post's own author.
+const canView = (blog, req) => {
+    if (isPubliclyVisible(blog)) return true;
+    const authHeader = req.headers.authorization;
+    if (getAdminEmail(authHeader)) return true;
+    const userId = getUserIdFromToken(authHeader);
+    return Boolean(userId && blog.author && String(blog.author) === userId);
+};
 
 export const addBlog = async (req, res)=>{
     try {
@@ -121,9 +129,10 @@ export const getBlogById = async (req, res) =>{
     }
 }
 
+// req.blog is set by authorOrAdmin, which has already checked ownership.
 export const deleteBlogById = async (req, res) =>{
     try {
-        const { id } = req.body;
+        const id = req.blog._id;
         await Blog.findByIdAndDelete(id);
 
         // Delete all comments associated with the blog
@@ -135,18 +144,36 @@ export const deleteBlogById = async (req, res) =>{
     }
 }
 
+const TOGGLE_MESSAGES = {
+    published: 'Blog published',
+    draft: 'Blog moved to drafts',
+    pending: 'Post submitted for review',
+};
+
+// Status transitions, by who is acting (req.blog/req.admin/req.user come from authorOrAdmin):
+//   admin:  live -> draft, anything else -> published (unchanged behaviour)
+//   author: live -> draft (unpublish), pending -> draft (withdraw), draft -> pending (submit)
+// Authors can never set 'published' directly; that is the admin's approval step.
 export const togglePublish = async (req, res) =>{
     try {
-        const { id } = req.body;
-        const blog = await Blog.findById(id);
-        if (!blog) {
-            return res.json({ success: false, message: "Blog not found" });
+        const blog = req.blog;
+        const live = isPubliclyVisible(blog);
+        let nextStatus;
+        if (req.admin) {
+            nextStatus = live ? 'draft' : 'published';
+        } else if (live || resolveStatus(blog) === 'pending') {
+            nextStatus = 'draft';
+        } else {
+            await assertPendingCapacity(req.user._id);
+            nextStatus = 'pending';
         }
-        // Live posts (published, or scheduled and due) go back to draft; anything else goes live now.
-        const fields = buildPublishFields({ status: isPubliclyVisible(blog) ? 'draft' : 'published' });
+
+        const fields = buildPublishFields({ status: nextStatus });
         Object.assign(blog, fields);
+        // A resubmission supersedes the note from the previous review.
+        if (nextStatus === 'pending') blog.reviewNote = null;
         await blog.save();
-        res.json({success: true, message: fields.status === 'published' ? 'Blog published' : 'Blog moved to drafts'})
+        res.json({success: true, status: nextStatus, message: TOGGLE_MESSAGES[nextStatus]})
     } catch (error) {
         res.json({success: false, message: error.message})
     }

@@ -19,6 +19,7 @@ import {
 import upload from "../middleware/multer.js";
 import auth from "../middleware/auth.js";
 import { userProtect } from "../middleware/userAuthMiddleware.js";
+import authorOrAdmin from "../middleware/authorOrAdmin.js";
 
 const blogRouter = express.Router();
 
@@ -30,8 +31,8 @@ blogRouter.post('/:blogId/view', incrementViews);
 blogRouter.post('/:blogId/ask-ai', askAiAboutArticle);
 blogRouter.get("/bookmarks",userProtect,getBookmarkedBlogs);
 blogRouter.get('/:blogId', getBlogById);
-blogRouter.post('/delete', auth, deleteBlogById);
-blogRouter.post('/toggle-publish', auth, togglePublish);
+blogRouter.post('/delete', authorOrAdmin, deleteBlogById);
+blogRouter.post('/toggle-publish', authorOrAdmin, togglePublish);
 blogRouter.post('/add-comment', addComment);
 blogRouter.post('/comments', getBlogComments);
 blogRouter.post('/give-topics', auth, getTopics);
